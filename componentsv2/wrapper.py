@@ -91,10 +91,10 @@ class NextcordAPIWrapperV2():
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/webhooks/{interaction.application_id}/{interaction.token}"),
-            json=self.__message_interaction_payload(components=component_holder.serialize(), content=content, flags=flags)
+            json={"components": component_holder.serialize(), "content": content, "flags": flags}
         )
 
-        self.active_holders[response["interaction"]["response_message_id"]] = component_holder
+        self.active_holders[response["id"]] = component_holder
 
     async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder, content: str = None):
         await self.bot.http.request(
