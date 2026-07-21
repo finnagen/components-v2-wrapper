@@ -18,7 +18,7 @@ class RadioGroup(ComponentV2):
         self.custom_id = custom_id
         self.options = options
 
-        self.required = True
+        self.required = required
 
     def serialize(self):
         base_dict = super().serialize()

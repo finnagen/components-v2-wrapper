@@ -32,7 +32,7 @@ class Thumbnail(ComponentV2, MediaItem):
 class File(ComponentV2, MediaItem):
     def __init__(self, file: UnfurledMedia, id = None):
         ComponentV2.__init__(13, id)
-        MediaItem.__init__(self, file, self.description)
+        MediaItem.__init__(self, file)
 
         self.__container_compatible__ = True
 
