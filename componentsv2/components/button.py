@@ -30,12 +30,25 @@ class ButtonV2(ComponentV2):
         self.callback = None
         self.registered = False
 
+        self.__has_holder = None
+
     def __call__(self, func):
         if self.registered == True:
             raise ValueError("Buttons cannot be registered to multiple callbacks!")
         
         self.callback = func
         self.registered = True
+
+        return self
+    
+    def on_callback(self, func):
+        if self.registered == True:
+            raise ValueError("Buttons cannot be registered to multiple callbacks!")
+        
+        self.callback = func
+        self.registered = True
+
+        self.__has_holder = False
 
         return self
 
@@ -63,17 +76,7 @@ class ButtonV2(ComponentV2):
         if self.registered == False:
             raise ValueError("Attempted to activate button, but it is not registered to a callback!")
         
-        await self.callback(self.parent_holder, self, interaction)
-
-class UIButtonV2(ButtonV2):
-    def __init__(self, style, label = None, custom_id = None, url = None, disabled = False, emoji = None, row = 1, id = None):
-        super().__init__(style, label, custom_id, url, disabled, emoji, row, id)
-
-    async def activated(self, interaction):
-        if self.disabled == True:
-            return
-        
-        await self.ui_callback(interaction)
-
-    async def ui_callback(self, interaction):
-        pass
+        if self.__has_holder != False:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(interaction)

@@ -100,9 +100,7 @@ class ComponentHolder():
                 return child
             
 class ModalV2():
-    def __init__(self, custom_id: str, title: str):
-        if custom_id == None:
-            raise ValueError("With this wrapper, custom_ids for modals are required!")
+    def __init__(self, title: str, custom_id: str = None):
         
         self.custom_id = custom_id
         self.title = title
@@ -137,6 +135,9 @@ class ModalV2():
         
         if initial == True:
             await self.on_form_submit(interaction)
+
+    def on_submit_decorator(self, func):
+        self.on_form_submit = func
 
     async def on_form_submit(self, interaction):
         pass

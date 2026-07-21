@@ -37,13 +37,39 @@ class NextcordAPIWrapperV2():
         if interaction.type == nextcord.InteractionType.component:
             holder: ComponentHolder = self.active_holders.get(str(interaction.message.id))
             if holder != None:
-                component = holder.get_component(interaction.data.get("custom_id"))
+                id = interaction.data.get("custom_id")
+                component = holder.get_component(id) if isinstance(holder, ComponentHolder) else self.__get_list_component(holder, id)
+
                 if component != None:
                     await component.activated(interaction)
         elif interaction.type == nextcord.InteractionType.modal_submit:
             modal: ModalV2 = self.active_modals.get(interaction.user.id)
             if modal != None:
                 await modal.submitted(interaction, interaction.data.get("components"))
+
+    def __get_list_component(self, comps: list[ComponentV2], id: str):
+        if id is None:
+            return
+        
+        for component in comps:
+            if hasattr(component, "custom_id") and component.custom_id == id:
+                return component
+            
+            if hasattr(component, "components"):
+                found = self.__get_list_component(component.components, id)
+                if found is not None:
+                    return found
+                
+            inner = getattr(component, "component", None)
+            if inner is not None:
+                if getattr(inner, "custom_id", None) == id:
+                    return inner
+
+                found = self.__get_list_component([inner], id)
+                if found is not None:
+                    return found
+                
+        return None
     
     def __message_interaction_payload(self, components: list[ComponentV2], content: str = None, flags: int = None) -> dict[str]:
         return {
@@ -63,41 +89,73 @@ class NextcordAPIWrapperV2():
                 "components": components
             }
         }
+
+    def __serialize_components(self, components: list[ComponentV2]):
+        serialized = []
+
+        for component in components:
+            serialized.append(component.serialize())
+
+        return serialized
+    
+    def __serialize_modal(self, components: list[ComponentV2], title: str, custom_id: str = None):
+        serialized = []
+
+        for component in components:
+            serialized.append(component.serialize())
+
+        return {
+            "type": 9,
+
+            "data": {
+                "title": title,
+                "custom_id": custom_id,
+                "components": serialized,
+            }
+        }
     
     async def send_modal(self, interaction: Interaction, modal: ModalV2):
         self.active_modals[interaction.user.id] = modal
+            
+        payload = modal.serialize()
 
         await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback"),
-            json = modal.serialize()
+            json = payload
         )
 
-    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder, content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
+        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback?with_response=true"),
-            json=self.__message_interaction_payload(components=component_holder.serialize(), content=content, flags=flags)
+            json=self.__message_interaction_payload(payload, content=content, flags=flags)
         )
 
         self.active_holders[response["interaction"]["response_message_id"]] = component_holder
 
-    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder, content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
+        
+        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/webhooks/{interaction.application_id}/{interaction.token}"),
-            json=self.__message_interaction_payload(components=component_holder.serialize(), content=content, flags=flags)
+            json=self.__message_interaction_payload(payload, content=content, flags=flags)
         )
 
         self.active_holders[response["interaction"]["response_message_id"]] = component_holder
 
-    async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder, content: str = None):
+    async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None):
+        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+
         await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback"),
-            json=self.__edit_interaction_payload(components=component_holder.serialize(), content=content)
+            json=self.__edit_interaction_payload(components=payload, content=content)
         )

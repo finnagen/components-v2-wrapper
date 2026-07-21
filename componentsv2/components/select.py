@@ -53,6 +53,15 @@ class SelectObject(ComponentV2):
         self.callback = func
 
         return self
+    
+    def on_submit(self, func):
+        if self.registered == True:
+            raise ValueError("Cannot register a Select component to multiple callbacks!")
+        
+        self.registered = True
+        self.callback = func
+
+        return self
 
 class StringSelect(SelectObject):
     class SelectOption():
@@ -266,37 +275,3 @@ class ChannelSelect(SelectObject):
         
         values = interaction.data.get("values")
         await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
-
-## UI SELECTS
-class UISelectObject(SelectObject):
-    def __init__(self, type: int, custom_id: str, placeholder: str = None, min_values: int = None, max_values: int = None, required: int = True, disabled: int = False):
-        super().__init__(type, custom_id, placeholder, min_values, max_values, required, disabled)
-
-    async def activated(self, interaction):
-        if self.disabled == True:
-            return
-        
-        await self.ui_callback(interaction)
-
-    async def ui_callback(self, interaction: Interaction):
-        pass
-
-class UIStringSelect(UISelectObject, StringSelect):
-    def __init__(self, custom_id: str, options: list[StringSelect.SelectOption], placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False):
-        StringSelect.__init__(self, custom_id, options, placeholder, min_values, max_values, required, disabled)
-
-class UIUserSelect(UISelectObject, UserSelect):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False):
-        UserSelect.__init__(self, custom_id, default_values, placeholder, min_values, max_values, required, disabled)
-
-class UIRoleSelect(UISelectObject, RoleSelect):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False):
-        RoleSelect.__init__(self, custom_id, default_values, placeholder, min_values, max_values, required, disabled)
-
-class UIChannelSelect(UISelectObject, ChannelSelect):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False):
-        ChannelSelect.__init__(self, custom_id, default_values, placeholder, min_values, max_values, required, disabled)
-
-class UIMentionableSelect(UISelectObject, MentionableSelect):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False):
-        MentionableSelect.__init__(self, custom_id, default_values, placeholder, min_values, max_values, required, disabled)

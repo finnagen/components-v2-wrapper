@@ -12,11 +12,11 @@ class ActionRow(ComponentV2):
         8: 1,
     }
 
-    def __init__(self, id: Optional[int] = None):
+    def __init__(self, components: list[ComponentV2] = [], id: Optional[int] = None):
         super().__init__(1, id)
 
         self.component_type: Optional[int] = None
-        self.components: list[ComponentV2] = []
+        self.components: list[ComponentV2] = components
 
         self.__container_compatible__ = True
     
@@ -42,3 +42,10 @@ class ActionRow(ComponentV2):
             raise ValueError(f"Cannot add more components to this action row! Max: {max}")
         
         self.components.append(component)
+        return self
+    
+    def append_components(self, *args: ComponentV2):
+        components = list(args)
+
+        for component in components:
+            self.append_component(component)
