@@ -12,8 +12,11 @@ class ActionRow(ComponentV2):
         8: 1,
     }
 
-    def __init__(self, components: list[ComponentV2] = [], id: Optional[int] = None):
+    def __init__(self, components: list[ComponentV2] = None, id: Optional[int] = None):
         super().__init__(1, id)
+
+        if components is None:
+            components = []
 
         self.component_type: Optional[int] = None
         self.components: list[ComponentV2] = components

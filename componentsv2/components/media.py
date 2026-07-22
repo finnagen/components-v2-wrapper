@@ -30,14 +30,17 @@ class Thumbnail(ComponentV2, MediaItem):
         return base_dict
     
 class File(ComponentV2, MediaItem):
-    def __init__(self, file: UnfurledMedia, id = None):
+    def __init__(self, file: UnfurledMedia, spoiler: bool = None, id: int = None):
         ComponentV2.__init__(13, id)
-        MediaItem.__init__(self, file)
+        MediaItem.__init__(self, file, spoiler)
 
         self.__container_compatible__ = True
 
     def serialize(self):
         return {
+            "type": self.type,
+            "id": self.id,
+
             "file": self.media.to_dict(),
             "description": self.description,
             "spoiler": self.spoiler,

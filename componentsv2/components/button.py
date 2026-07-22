@@ -6,7 +6,7 @@ from .base import ComponentV2
 from ..utils.serialize import serialize_emoji
 
 class ButtonV2(ComponentV2):
-    def __init__(self, style: nextcord.ButtonStyle, label: Optional[str] = None, custom_id: Optional[str] = None, url: Optional[str] = None, disabled: Optional[bool] = False, emoji: Optional[nextcord.PartialEmoji] = None, row: Optional[int] = 1, id: Optional[int] = None):
+    def __init__(self, style: nextcord.ButtonStyle, label: Optional[str] = None, custom_id: Optional[str] = None, url: Optional[str] = None, disabled: Optional[bool] = False, emoji: Optional[nextcord.PartialEmoji] = None, row: Optional[int] = 0, id: Optional[int] = None):
         if style != nextcord.ButtonStyle.link and custom_id == None:
             raise TypeError("Non-link buttons must have a custom_id attribute!")
         

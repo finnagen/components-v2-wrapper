@@ -24,7 +24,7 @@ class TextInput(ComponentV2):
         base_dict["max_length"] = self.max_length
 
         base_dict["required"] = self.required
-        base_dict["value"] = self.value
+        base_dict["value"] = self.set_value
 
         base_dict["placeholder"] = self.placeholder
 

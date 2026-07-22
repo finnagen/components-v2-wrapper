@@ -26,10 +26,11 @@ class Container(Nestable):
         total_rows = -1
 
         for component in self.components:
+            if isinstance(component, ActionRow):
+                total_rows += 1
+
             if isinstance(component, ActionRow) and total_rows == row:
                 return total_rows, component
-            elif isinstance(component, ActionRow):
-                total_rows += 1
 
         return total_rows, None 
 

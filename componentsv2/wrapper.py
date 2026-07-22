@@ -116,6 +116,9 @@ class NextcordAPIWrapperV2():
     
     async def send_modal(self, interaction: Interaction, modal: ModalV2):
         self.active_modals[interaction.user.id] = modal
+
+        modal.id = interaction.user.id
+        modal.parent_wrapper = self
             
         payload = modal.serialize()
 
@@ -130,6 +133,10 @@ class NextcordAPIWrapperV2():
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
+        if isinstance(component_holder, ComponentHolder):
+            component_holder.id = interaction.user.id
+            component_holder.parent_wrapper = self
+
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback?with_response=true"),
@@ -142,7 +149,7 @@ class NextcordAPIWrapperV2():
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
-        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+        payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
@@ -153,7 +160,7 @@ class NextcordAPIWrapperV2():
         self.active_holders[response["id"]] = component_holder
 
     async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None):
-        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+        payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
         await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback"),

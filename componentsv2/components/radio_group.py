@@ -2,14 +2,20 @@ from .base import ComponentV2
 
 class RadioGroup(ComponentV2):
     class Option():
-        def __init__(self, value: str, label: str):
+        def __init__(self, value: str, label: str, description: str = None, required: bool = None):
             self.value = value
             self.label = label
+
+            self.required = required
+            self.description = description
 
         def serialize(self):
             return {
                 "value": self.value,
-                "label": self.label
+                "label": self.label,
+
+                "description": self.description,
+                "required": self.required
             }
     
     def __init__(self, custom_id: str, options: list[Option], required: bool = None, id: int = None):

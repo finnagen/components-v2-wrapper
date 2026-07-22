@@ -4,6 +4,7 @@ from .components.action_row import ActionRow
 from .components.select import SelectObject
 
 import copy
+import asyncio
 
 class ComponentHolder():
     def __init_subclass__(cls):
@@ -21,7 +22,7 @@ class ComponentHolder():
 
         cls.children = children
 
-    def __init__(self):
+    def __init__(self, timeout: int = None):
         self.children = copy.deepcopy(self.children)
         rows: list[ActionRow] = []
 
@@ -34,9 +35,24 @@ class ComponentHolder():
 
         self.rows = rows
 
+        self.parent_wrapper = None
+        self.id = None
+
         for child in self.children:
             if isinstance(child, ButtonV2) or isinstance(child, SelectObject): # switch StringSelect to general Select object
                 self.append_to_row(child.row, child)
+
+        if timeout is not None:
+            created_task = asyncio.create_task(self.__timeout(timeout))
+            self.__task_timeout = created_task
+        else:
+            self.__task_timeout = None
+
+        self.timeout = timeout
+
+    async def __timeout(self, delay: int):
+        await asyncio.sleep(delay)
+        self.close()
 
     def __rec_add_components(self, component: ComponentV2, initial: bool):
         if hasattr(component, "row"):
@@ -98,14 +114,36 @@ class ComponentHolder():
         for child in self.children:
             if getattr(child, "custom_id", None) == custom_id:
                 return child
+
+    def close(self):
+        if self.parent_wrapper is not None:
+            del self.parent_wrapper.active_modals[self.id]
+
+        self.parent_wrapper = None
+        self.id = None
+
+        if self.__task_timeout is not None:
+            self.__task_timeout.cancel()
+            self.__task_timeout = None
             
 class ModalV2():
-    def __init__(self, title: str, custom_id: str = None):
+    def __init__(self, title: str, timeout: int = None, custom_id: str = None):
         
         self.custom_id = custom_id
         self.title = title
 
         self.children = []
+
+        self.parent_wrapper = None
+        self.id = None
+
+        if timeout is not None:
+            created_task = asyncio.create_task(self.__timeout(timeout))
+            self.__task_timeout = created_task
+        else:
+            self.__task_timeout = None
+
+        self.timeout = timeout
 
     async def __handle_component_submitted(self, sc: dict[str]):
         if custom_id := sc.get("custom_id"):
@@ -210,4 +248,14 @@ class ModalV2():
             components.append(child)
 
         return components
-    
+
+    def close(self):
+        if self.parent_wrapper is not None:
+            del self.parent_wrapper.active_modals[self.id]
+
+        self.parent_wrapper = None
+        self.id = None
+
+        if self.__task_timeout is not None:
+            self.__task_timeout.cancel()
+            self.__task_timeout = None

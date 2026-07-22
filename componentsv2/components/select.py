@@ -16,11 +16,11 @@ class DefaultValue():
         }
 
 class SelectObject(ComponentV2):
-    def __init__(self, type: int, custom_id: str, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
+    def __init__(self, type: int, custom_id: str, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
         if min_values != None and required == True and min_values < 1:
             raise ValueError("Required cannot be true if min_values is less than 1!")
         
-        super().__init__(type)
+        super().__init__(type, id)
         
         self.custom_id = custom_id
         self.placeholder = placeholder
@@ -83,8 +83,8 @@ class StringSelect(SelectObject):
             }
 
 
-    def __init__(self, custom_id: str, options: list[SelectOption], placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
-        super().__init__(3, custom_id, placeholder, min_values, max_values, required, disabled, row)
+    def __init__(self, custom_id: str, options: list[SelectOption], placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
+        super().__init__(3, custom_id, placeholder, min_values, max_values, required, disabled, row, id)
         
         self.options = options
         self.placeholder = placeholder
@@ -112,7 +112,7 @@ class StringSelect(SelectObject):
 
 ## DEFAULT VALUE OBJECTS (might create ANOTHER subclass to handle these fellas)
 class UserSelect(SelectObject):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
+    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
         if default_values != None:
             values = len(default_values)
 
@@ -122,7 +122,7 @@ class UserSelect(SelectObject):
             if min > values or max < values:
                 raise ValueError("The length of 'default_values' MUST be within the range of min_values and max_values (default 1-1).")
         
-        super().__init__(5, custom_id, placeholder, min_values, max_values, required, disabled, row)
+        super().__init__(5, custom_id, placeholder, min_values, max_values, required, disabled, row, id)
         
         self.default_values = default_values
         self.placeholder = placeholder
@@ -161,7 +161,7 @@ class RoleSelect(SelectObject):
             if min > values or max < values:
                 raise ValueError("The length of 'default_values' MUST be within the range of min_values and max_values (default 1-1).")
         
-        super().__init__(6, custom_id, placeholder, min_values, max_values, required, disabled, row)
+        super().__init__(6, custom_id, placeholder, min_values, max_values, required, disabled, row, id)
         
         self.default_values = default_values
         self.placeholder = placeholder
@@ -190,7 +190,7 @@ class RoleSelect(SelectObject):
         await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
 
 class MentionableSelect(SelectObject):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
+    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
         if default_values != None:
             values = len(default_values)
 
@@ -200,8 +200,8 @@ class MentionableSelect(SelectObject):
             if min > values or max < values:
                 raise ValueError("The length of 'default_values' MUST be within the range of min_values and max_values (default 1-1).")
         
-        super().__init__(7, custom_id, placeholder, min_values, max_values, required, disabled, row)
-        
+        super().__init__(7, custom_id, placeholder, min_values, max_values, required, disabled, row, id)
+
         self.default_values = default_values
         self.placeholder = placeholder
 
@@ -229,7 +229,7 @@ class MentionableSelect(SelectObject):
         await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
 
 class ChannelSelect(SelectObject):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, channel_types: list[nextcord.ChannelType] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
+    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, channel_types: list[nextcord.ChannelType] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
         if default_values != None:
             values = len(default_values)
 
@@ -247,7 +247,7 @@ class ChannelSelect(SelectObject):
             channel_values = None
 
         self.channel_types = channel_values
-        super().__init__(8, custom_id, placeholder, min_values, max_values, required, disabled, row)
+        super().__init__(8, custom_id, placeholder, min_values, max_values, required, disabled, row, id)
         
         self.default_values = default_values
         self.placeholder = placeholder
