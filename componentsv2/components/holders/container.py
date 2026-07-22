@@ -2,11 +2,15 @@ from .nestable import Nestable
 from ..base import ComponentV2
 
 from ..action_row import ActionRow
+from ..text_display import TextDisplay
 
 from typing import Optional
 
 class Container(Nestable):
-    def __init__(self, components: list[ComponentV2] = [], accent_color: int = None, spoiler: bool = None, id: Optional[int] = None):
+    def __init__(self, components: list[ComponentV2] = None, accent_color: int = None, spoiler: bool = None, id: Optional[int] = None):
+        if components is None:
+            components = []
+
         for component in components:
             if hasattr(component, "__container_compatible__") == False:
                 raise TypeError(f"Component {component.__class__.__name__} not accepted in Containers!")
@@ -15,6 +19,8 @@ class Container(Nestable):
         
         self.accent_color = accent_color
         self.spoiler = spoiler
+
+        self.footer = None
         
     def get_row(self, row: int) -> tuple[int, ActionRow]:
         total_rows = -1
@@ -40,9 +46,31 @@ class Container(Nestable):
 
                 return self.append_component(action_row)
             else:
-                IndexError("Action rows must be created sequentially!")
+                raise IndexError("Action rows must be created sequentially!")
 
         self.components.append(component)
+
+        if self.footer is not None:
+            self.components.remove(self.footer)
+            self.components.append(self.footer)
+
+        return self
+    
+    def add_field(self, title: str, content: str):
+        return self.append_component(
+            TextDisplay(
+                f"**{title}**\n{content}"
+            )
+        )
+
+    def set_footer(self, footer: str):
+        if self.footer is not None:
+            self.components.remove(self.footer)
+
+        self.footer = TextDisplay(f"-# {footer}")
+        self.components.append(
+            self.footer
+        )
 
         return self
 

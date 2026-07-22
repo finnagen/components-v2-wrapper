@@ -128,7 +128,7 @@ class NextcordAPIWrapperV2():
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
-        payload = component_holder.serialize if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+        payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
