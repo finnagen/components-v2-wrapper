@@ -154,7 +154,7 @@ class NextcordAPIWrapperV2():
         flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/webhooks/{interaction.application_id}/{interaction.token}"),
-            json={"components": component_holder.serialize(), "content": content, "flags": flags}
+            json={"components": payload, "content": content, "flags": flags}
         )
 
         self.active_holders[response["id"]] = component_holder

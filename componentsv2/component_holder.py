@@ -117,7 +117,7 @@ class ComponentHolder():
 
     def close(self):
         if self.parent_wrapper is not None:
-            del self.parent_wrapper.active_modals[self.id]
+            del self.parent_wrapper.active_holders[self.id]
 
         self.parent_wrapper = None
         self.id = None

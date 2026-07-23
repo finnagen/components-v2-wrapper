@@ -151,7 +151,7 @@ class UserSelect(SelectObject):
         await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of ids, not user objects.
 
 class RoleSelect(SelectObject):
-    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0):
+    def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
         if default_values != None:
             values = len(default_values)
 
