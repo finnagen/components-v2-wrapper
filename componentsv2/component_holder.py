@@ -179,6 +179,10 @@ class ModalV2():
             for child in components:
                 await self.__handle_component_submitted(child)
 
+    async def __timeout(self, delay: int):
+        await asyncio.sleep(delay)
+        self.close()
+
     async def submitted(self, interaction, ser_components: list[dict[str]], initial: bool = True):
         for sc in ser_components:
             await self.__handle_component_submitted(sc)
