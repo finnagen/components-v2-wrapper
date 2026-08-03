@@ -144,6 +144,7 @@ class NextcordAPIWrapperV2():
         )
 
         self.active_holders[response["interaction"]["response_message_id"]] = component_holder
+        component_holder.id = response["interaction"]["response_message_id"]
 
     async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
         if is_components_v2 == True and content != None:
@@ -158,8 +159,18 @@ class NextcordAPIWrapperV2():
         )
 
         self.active_holders[response["id"]] = component_holder
+        component_holder.id = response["id"]
 
     async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None):
+        existing_holder = self.active_holders.get(str(interaction.message.id), None)
+        if (component_holder is not None) and (existing_holder is not None) and (existing_holder is not component_holder):
+            existing_holder.close()
+            self.active_holders[str(interaction.message.id)] = component_holder
+            component_holder.id = interaction.message.id
+        elif (existing_holder is None) and (component_holder is not None):
+            self.active_holders[str(interaction.message.id)] = component_holder
+            component_holder.id = interaction.message.id
+
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
         await self.bot.http.request(

@@ -40,7 +40,7 @@ class ComponentHolder():
 
         for child in self.children:
             if isinstance(child, ButtonV2) or isinstance(child, SelectObject): # switch StringSelect to general Select object
-                self.append_to_row(child.row, child)
+                self.append_to_row(child.row, child, _is_child=True)
 
         if timeout is not None:
             created_task = asyncio.create_task(self.__timeout(timeout))
@@ -70,11 +70,20 @@ class ComponentHolder():
         if initial == False:
             component.__row_child__ = True
 
-        self.children.append(component)
+        if getattr(component, "push_to_front", False) is True:
+            self.children.insert(0, component)
+        else:
+            self.children.append(component)
 
         if hasattr(component, "components") == True:
             for child in component.components:
                 self.__rec_add_components(child, False)
+
+    def remove_component(self, component: ComponentV2): ## only works for surface-level components
+        try:
+            self.children.remove(component)
+        except:
+            raise KeyError("Component cannot be removed as it does not exist!")
 
     def add_component(self, component: ComponentV2):
         self.__rec_add_components(component, True)
@@ -86,7 +95,7 @@ class ComponentHolder():
         for component in components:
             self.__rec_add_components(component, True)
 
-    def append_to_row(self, row: int, component: ComponentV2):
+    def append_to_row(self, row: int, component: ComponentV2, *, _is_child: bool = False):
         if row < len(self.rows):
             action_row = self.rows[row]
         elif row == len(self.rows):
@@ -95,6 +104,9 @@ class ComponentHolder():
             self.children.append(action_row)
         else:
             raise IndexError("New rows must be created sequentially (cannot skip rows).")
+
+        if _is_child == False:
+            self.children.append(component)
 
         component.__row_child__ = True
         action_row.append_component(component)

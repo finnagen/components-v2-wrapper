@@ -7,7 +7,7 @@ from ..text_display import TextDisplay
 from typing import Optional
 
 class Container(Nestable):
-    def __init__(self, components: list[ComponentV2] = None, accent_color: int = None, spoiler: bool = None, id: Optional[int] = None):
+    def __init__(self, components: list[ComponentV2] = None, accent_color: int = None, spoiler: bool = None, id: Optional[int] = None, push_to_front: bool = False):
         if components is None:
             components = []
 
@@ -20,6 +20,7 @@ class Container(Nestable):
         self.accent_color = accent_color
         self.spoiler = spoiler
 
+        self.push_to_front = push_to_front
         self.footer = None
         
     def get_row(self, row: int) -> tuple[int, ActionRow]:

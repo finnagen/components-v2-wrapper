@@ -75,8 +75,8 @@ class ButtonV2(ComponentV2):
         
         if self.registered == False:
             raise ValueError("Attempted to activate button, but it is not registered to a callback!")
-        
-        if self.__has_holder != False:
+
+        if self.__has_holder == None:
             await self.callback(self.parent_holder, self, interaction)
         else:
-            await self.callback(interaction)
+            await self.callback(self, interaction)
