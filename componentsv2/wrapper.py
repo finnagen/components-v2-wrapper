@@ -159,21 +159,82 @@ class NextcordAPIWrapperV2():
         )
 
         self.active_holders[response["id"]] = component_holder
-        component_holder.id = response["id"]
+
+        if isinstance(component_holder, ComponentHolder):
+            component_holder.parent_wrapper = self
+            component_holder.id = response["id"]
+
+    async def send_channel(self, channel: int, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+        if is_components_v2 == True and content != None:
+            raise TypeError("ComponentsV2 messages cannot contain content!")
+        
+        payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
+        response = await self.bot.http.request(
+            nextcord.http.Route("POST", f"/channels/{channel}/messages"),
+            json={"components": payload, "content": content, "flags": flags}
+        )
+
+        self.active_holders[response["id"]] = component_holder
+
+        if isinstance(component_holder, ComponentHolder):
+            component_holder.parent_wrapper = self
+            component_holder.id = response["id"]
+
+        return response
 
     async def edit_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None):
         existing_holder = self.active_holders.get(str(interaction.message.id), None)
-        if (component_holder is not None) and (existing_holder is not None) and (existing_holder is not component_holder):
+        is_holder = isinstance(component_holder, ComponentHolder)
+
+        if (existing_holder is not None) and (existing_holder is not component_holder):
             existing_holder.close()
             self.active_holders[str(interaction.message.id)] = component_holder
-            component_holder.id = interaction.message.id
-        elif (existing_holder is None) and (component_holder is not None):
+            if is_holder:
+                component_holder.id = str(interaction.message.id)
+                component_holder.parent_wrapper = self
+        elif (component_holder is not None):
             self.active_holders[str(interaction.message.id)] = component_holder
-            component_holder.id = interaction.message.id
+            if is_holder:
+                component_holder.id = str(interaction.message.id)
+                component_holder.parent_wrapper = self
 
-        payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
+        payload = component_holder.serialize() if is_holder else self.__serialize_components(component_holder)
 
         await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback"),
             json=self.__edit_interaction_payload(components=payload, content=content)
+        )
+
+    async def edit_original_response(self, interaction: Interaction, component_holder: ComponentV2 | list[ComponentV2], content: str = None):
+        original_message = await interaction.original_message()
+
+        if original_message is None:
+            return
+        
+        existing_holder = self.active_holders.get(str(original_message.id), None)
+        is_holder = isinstance(component_holder, ComponentHolder)
+
+        if (existing_holder is not None) and (existing_holder is not component_holder):
+            existing_holder.close()
+            self.active_holders[str(original_message.id)] = component_holder
+            if is_holder:
+                component_holder.id = str(original_message.id)
+                component_holder.parent_wrapper = self
+        elif (component_holder is not None):
+            self.active_holders[str(original_message.id)] = component_holder
+            if is_holder:
+                component_holder.id = str(original_message.id)
+                component_holder.parent_wrapper = self
+
+        body = {
+            "content": content
+        }
+
+        body["components"] = component_holder.serialize() if is_holder else self.__serialize_components(component_holder)
+
+        await self.bot.http.request(
+            nextcord.http.Route("POST", f"/webhooks/{self.bot.application_id}/{interaction.token}/messages/@original"),
+            json=body
         )
