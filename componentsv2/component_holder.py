@@ -56,7 +56,7 @@ class ComponentHolder():
 
     def __rec_add_components(self, component: ComponentV2, initial: bool):
         if hasattr(component, "row"):
-            self.append_to_row(component.row, component)
+            self.append_to_row(component.row, component, is_child=True)
 
         if hasattr(component, "parent_holder") == False:
             component.parent_holder = self
