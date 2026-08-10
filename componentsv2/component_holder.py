@@ -85,6 +85,9 @@ class ComponentHolder():
         except:
             raise KeyError("Component cannot be removed as it does not exist!")
 
+    def remove_all_components(self):
+        self.children.clear()
+
     def add_component(self, component: ComponentV2):
         self.__rec_add_components(component, True)
         return self
@@ -110,6 +113,10 @@ class ComponentHolder():
 
         component.__row_child__ = True
         action_row.append_component(component)
+
+    def push_rows_down(self):
+        self.children = [x for x in self.children if not isinstance(x, ActionRow)] + \
+        [x for x in self.children if isinstance(x, ActionRow)]
 
     def serialize(self):
         components = []

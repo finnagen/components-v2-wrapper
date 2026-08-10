@@ -127,7 +127,7 @@ class NextcordAPIWrapperV2():
             json = payload
         )
 
-    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
@@ -137,7 +137,7 @@ class NextcordAPIWrapperV2():
             component_holder.id = interaction.user.id
             component_holder.parent_wrapper = self
 
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback?with_response=true"),
             json=self.__message_interaction_payload(payload, content=content, flags=flags)
@@ -146,15 +146,15 @@ class NextcordAPIWrapperV2():
         self.active_holders[response["interaction"]["response_message_id"]] = component_holder
         component_holder.id = response["interaction"]["response_message_id"]
 
-    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
         response = await self.bot.http.request(
-            nextcord.http.Route("POST", f"/webhooks/{interaction.application_id}/{interaction.token}"),
+            nextcord.http.Route("POST", f"/webhooks/{self.bot.application_id}/{interaction.token}"),
             json={"components": payload, "content": content, "flags": flags}
         )
 
@@ -164,13 +164,13 @@ class NextcordAPIWrapperV2():
             component_holder.parent_wrapper = self
             component_holder.id = response["id"]
 
-    async def send_channel(self, channel: int, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False):
+    async def send_channel(self, channel: int, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/channels/{channel}/messages"),
             json={"components": payload, "content": content, "flags": flags}
@@ -207,34 +207,36 @@ class NextcordAPIWrapperV2():
             json=self.__edit_interaction_payload(components=payload, content=content)
         )
 
-    async def edit_original_response(self, interaction: Interaction, component_holder: ComponentV2 | list[ComponentV2], content: str = None):
+    async def edit_original_response(self, interaction: Interaction, component_holder: ComponentV2 | list[ComponentV2], content: str | None = None, *, is_components_v2: bool = False):
         original_message = await interaction.original_message()
 
         if original_message is None:
             return
-        
-        existing_holder = self.active_holders.get(str(original_message.id), None)
+
+        message_id = str(original_message.id)
+        existing_holder = self.active_holders.get(message_id)
+
         is_holder = isinstance(component_holder, ComponentHolder)
 
-        if (existing_holder is not None) and (existing_holder is not component_holder):
-            existing_holder.close()
-            self.active_holders[str(original_message.id)] = component_holder
-            if is_holder:
-                component_holder.id = str(original_message.id)
-                component_holder.parent_wrapper = self
-        elif (component_holder is not None):
-            self.active_holders[str(original_message.id)] = component_holder
-            if is_holder:
-                component_holder.id = str(original_message.id)
-                component_holder.parent_wrapper = self
+        if is_holder:
+            component_holder.id = message_id
+            component_holder.parent_wrapper = self
 
-        body = {
-            "content": content
-        }
+        components = component_holder.serialize() if is_holder else self.__serialize_components(component_holder)
 
-        body["components"] = component_holder.serialize() if is_holder else self.__serialize_components(component_holder)
-
+        flags = MessageFlags(is_components_v2=is_components_v2).value
         await self.bot.http.request(
-            nextcord.http.Route("POST", f"/webhooks/{self.bot.application_id}/{interaction.token}/messages/@original"),
-            json=body
+            nextcord.http.Route("PATCH", f"/webhooks/{self.bot.application_id}/{interaction.token}/messages/@original"),
+            json={
+                "content": content,
+                "components": components,
+                "flags": flags,
+            }
         )
+
+        if existing_holder is not None and existing_holder is not component_holder:
+            existing_holder.close()
+        if component_holder is not None:
+            self.active_holders[message_id] = component_holder
+        else:
+            self.active_holders.pop(message_id, None)
