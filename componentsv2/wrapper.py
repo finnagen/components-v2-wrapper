@@ -1,6 +1,7 @@
 import nextcord
 import json
 import copy
+import asyncio
 
 from nextcord.ext import commands
 from nextcord import Interaction
@@ -37,10 +38,18 @@ class NextcordAPIWrapperV2():
         if interaction.type == nextcord.InteractionType.component:
             holder: ComponentHolder = self.active_holders.get(str(interaction.message.id))
             if holder != None:
+                await holder.reset_timeout()
+
                 id = interaction.data.get("custom_id")
                 component = holder.get_component(id) if isinstance(holder, ComponentHolder) else self.__get_list_component(holder, id)
 
                 if component != None:
+                    values = interaction.data.get("values")
+                    if values is not None:
+                        component.values = values
+                        if len(values) == 1:
+                            component.value = values[0]
+
                     await component.activated(interaction)
         elif interaction.type == nextcord.InteractionType.modal_submit:
             modal: ModalV2 = self.active_modals.get(interaction.user.id)
@@ -113,6 +122,10 @@ class NextcordAPIWrapperV2():
                 "components": serialized,
             }
         }
+
+    async def __default_timeout(self, id: str, duration: int = 600):
+        await asyncio.sleep(duration)
+        self.active_holders.pop(id, None)
     
     async def send_modal(self, interaction: Interaction, modal: ModalV2):
         self.active_modals[interaction.user.id] = modal
@@ -127,60 +140,68 @@ class NextcordAPIWrapperV2():
             json = payload
         )
 
-    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
+    async def send_message(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_notifications: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
-        if isinstance(component_holder, ComponentHolder):
-            component_holder.id = interaction.user.id
-            component_holder.parent_wrapper = self
-
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_notifications=suppress_notifications).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/interactions/{interaction.id}/{interaction.token}/callback?with_response=true"),
             json=self.__message_interaction_payload(payload, content=content, flags=flags)
         )
 
-        self.active_holders[response["interaction"]["response_message_id"]] = component_holder
-        component_holder.id = response["interaction"]["response_message_id"]
+        id = response["interaction"]["response_message_id"]
 
-    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
+        self.active_holders[id] = component_holder
+        if isinstance(component_holder, ComponentHolder):
+            component_holder.id = id
+            component_holder.parent_wrapper = self
+        else:
+            asyncio.create_task(self.__default_timeout(id))
+
+    async def send_followup(self, interaction: Interaction, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_notifications: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_notifications=suppress_notifications).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/webhooks/{self.bot.application_id}/{interaction.token}"),
             json={"components": payload, "content": content, "flags": flags}
         )
 
-        self.active_holders[response["id"]] = component_holder
+        id = response["id"]
 
+        self.active_holders[id] = component_holder
         if isinstance(component_holder, ComponentHolder):
+            component_holder.id = id
             component_holder.parent_wrapper = self
-            component_holder.id = response["id"]
+        else:
+            asyncio.create_task(self.__default_timeout(id))
 
-    async def send_channel(self, channel: int, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_mentions: bool = False):
+    async def send_channel(self, channel: int, component_holder: ComponentHolder | list[ComponentV2], content: str = None, *, ephemeral: bool = False, is_components_v2: bool = False, suppress_notifications: bool = False):
         if is_components_v2 == True and content != None:
             raise TypeError("ComponentsV2 messages cannot contain content!")
         
         payload = component_holder.serialize() if isinstance(component_holder, ComponentHolder) else self.__serialize_components(component_holder)
 
-        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_mentions=suppress_mentions).value
+        flags = MessageFlags(ephemeral=ephemeral, is_components_v2=is_components_v2, suppress_notifications=suppress_notifications).value
         response = await self.bot.http.request(
             nextcord.http.Route("POST", f"/channels/{channel}/messages"),
             json={"components": payload, "content": content, "flags": flags}
         )
 
-        self.active_holders[response["id"]] = component_holder
+        id = response["id"]
 
+        self.active_holders[id] = component_holder
         if isinstance(component_holder, ComponentHolder):
+            component_holder.id = id
             component_holder.parent_wrapper = self
-            component_holder.id = response["id"]
+        else:
+            asyncio.create_task(self.__default_timeout(id))
 
         return response
 

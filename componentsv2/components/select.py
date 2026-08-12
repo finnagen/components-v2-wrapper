@@ -32,6 +32,7 @@ class SelectObject(ComponentV2):
 
         self.callback = None
         self.registered = False
+        self.has_holder = False
 
     def serialize(self):   
         return {
@@ -50,6 +51,7 @@ class SelectObject(ComponentV2):
             raise ValueError("Cannot register a Select component to multiple callbacks!")
         
         self.registered = True
+        self.has_holder = True
         self.callback = func
 
         return self
@@ -59,6 +61,7 @@ class SelectObject(ComponentV2):
             raise ValueError("Cannot register a Select component to multiple callbacks!")
         
         self.registered = True
+        self.has_holder = False
         self.callback = func
 
         return self
@@ -106,9 +109,10 @@ class StringSelect(SelectObject):
         if self.registered == False:
             raise ValueError("Attempted to activate Select component, but it is not registered to a callback!")
         
-        values = interaction.data.get("values")
-        
-        await self.callback(self.parent_holder, self, interaction, values)
+        if self.has_holder is True:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(self, interaction)
 
 ## DEFAULT VALUE OBJECTS (might create ANOTHER subclass to handle these fellas)
 class UserSelect(SelectObject):
@@ -147,8 +151,10 @@ class UserSelect(SelectObject):
         if self.registered == False:
             raise ValueError("Attempted to activate Select component, but it is not registered to a callback!")
         
-        values = interaction.data.get("values")
-        await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of ids, not user objects.
+        if self.has_holder is True:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(self, interaction)
 
 class RoleSelect(SelectObject):
     def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
@@ -185,9 +191,11 @@ class RoleSelect(SelectObject):
         
         if self.registered == False:
             raise ValueError("Attempted to activate Select component, but it is not registered to a callback!")
-        
-        values = interaction.data.get("values")
-        await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
+
+        if self.has_holder is True:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(self, interaction)
 
 class MentionableSelect(SelectObject):
     def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
@@ -225,8 +233,10 @@ class MentionableSelect(SelectObject):
         if self.registered == False:
             raise ValueError("Attempted to activate Select component, but it is not registered to a callback!")
         
-        values = interaction.data.get("values")
-        await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
+        if self.has_holder is True:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(self, interaction)
 
 class ChannelSelect(SelectObject):
     def __init__(self, custom_id: str, default_values: list[DefaultValue] = None, channel_types: list[nextcord.ChannelType] = None, placeholder: str = None, min_values: int = None, max_values: int = None, required: bool = True, disabled: bool = False, row: int = 0, id: int = None):
@@ -272,6 +282,8 @@ class ChannelSelect(SelectObject):
         
         if self.registered == False:
             raise ValueError("Attempted to activate Select component, but it is not registered to a callback!")
-        
-        values = interaction.data.get("values")
-        await self.callback(self.parent_holder, self, interaction, values) ## due to a nextcord limitation, i am only able to send the list of values, not user objects.
+
+        if self.has_holder is True:
+            await self.callback(self.parent_holder, self, interaction)
+        else:
+            await self.callback(self, interaction)

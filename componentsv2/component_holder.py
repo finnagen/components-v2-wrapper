@@ -54,6 +54,11 @@ class ComponentHolder():
         await asyncio.sleep(delay)
         self.close()
 
+    async def reset_timeout(self):
+        if self.timeout is not None:
+            self.__task_timeout.cancel()
+            self.__task_timeout = asyncio.create_task(self.__timeout(self.timeout))
+
     def __rec_add_components(self, component: ComponentV2, initial: bool):
         if hasattr(component, "row"):
             self.append_to_row(component.row, component, _is_child=True)
@@ -112,6 +117,8 @@ class ComponentHolder():
             self.children.append(component)
 
         component.__row_child__ = True
+        component.parent_holder = self
+        
         action_row.append_component(component)
 
     def push_rows_down(self):
@@ -195,6 +202,10 @@ class ModalV2():
             await self.__handle_component_submitted(sc)
         
         if initial == True:
+            if self.timeout is not None:
+                self.__task_timeout.cancel()
+                self.__task_timeout = asyncio.create_task(self.__timeout(self.timeout))
+
             await self.on_form_submit(interaction)
 
     def on_submit_decorator(self, func):
